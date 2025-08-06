@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: java
+server:
+  port: 8001
+app:
+    # 生成的试题页面基础URL
+    base-url: https://file.2u1.cn/java/
+    file-path: /mnt/f/files/java

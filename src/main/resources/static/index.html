@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java 试题生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 300px;
+            background: linear-gradient(135deg, #1a6dcc, #0d47a1);
+            color: white;
+            padding: 25px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .sidebar h2 {
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.8em;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 1.1em;
+        }
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            background-color: rgba(255,255,255,0.9);
+        }
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: 2px solid #4CAF50;
+        }
+        .submit-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .iframe-container {
+            width: 100%;
+            height: calc(100vh - 40px);
+            border: none;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        #result-iframe {
+        width: 100%;
+    border: 0;
+    height: 100%;
+    }
+        .loading {
+            width: 100%;
+            display: flex;
+            background: #eee;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            font-size: 1.2em;
+            position: absolute;
+            top: 0;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: #e74c3c;
+            padding: 15px;
+            background-color: #fadbd8;
+            border-radius: 6px;
+            margin-top: 15px;
+            border: 1px solid #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧控制面板 -->
+        <div class="sidebar">
+            <h2>Java 试题生成器</h2>
+            
+            <div class="form-group">
+                <label for="question-type">题型选择</label>
+                <select id="question-type">
+                    <option value="1">选择题</option>
+                    <option value="2">判断题</option>
+                    <option value="3">问答题</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="api-key">阿里云 API Key</label>
+                <input 
+                    type="password" 
+                    id="api-key" 
+                    placeholder="请输入您的阿里云API Key"
+                    autocomplete="off"
+                >
+            </div>
+
+            <button id="submit-btn" class="submit-btn">生成试题</button>
+
+            <div id="error-message" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- 右侧内容区域 -->
+        <div class="main-content">
+            <div class="iframe-container">
+                <iframe 
+                    id="result-iframe" 
+                    src="about:blank" 
+                    allowfullscreen
+                >
+                </iframe>
+
+            </div>
+        </div>
+        <div id="loading" class="loading" style="display: flex;">
+            <div class="loading-spinner"></div>
+            <p>正在生成试题，请稍候...</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const questionTypeSelect = document.getElementById('question-type');
+            const apiKeyInput = document.getElementById('api-key');
+            const submitBtn = document.getElementById('submit-btn');
+            const resultIframe = document.getElementById('result-iframe');
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('error-message');
+            const apiKeyData =localStorage.getItem('apiKey');
+            showLoading(false);
+            if(!!apiKeyData){
+              apiKeyInput.value = apiKeyData;
+            }
+            // 初始化：隐藏错误信息
+            errorMessage.style.display = 'none';
+
+            // 提交按钮点击事件
+            submitBtn.addEventListener('click', async function() {
+                // 获取用户输入
+                const questionType = questionTypeSelect.value;
+                const apiKey = apiKeyInput.value.trim();
+
+                // 验证输入
+                if (!apiKey) {
+                    showError('请输入阿里云 API Key');
+                    return;
+                }
+
+                // 显示加载状态
+                showLoading(true);
+
+                try {
+                    // 模拟调用后端API（实际使用时替换为真实的API端点）
+                    const response = await fetch('/api/generate-java-questions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            questionType: questionType,
+                            apiKey: apiKey
+                        })
+                    });
+                    localStorage.setItem('apiKey', apiKey);
+                    if (!response.ok) {
+                        throw new Error(`API请求失败: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    // 检查返回数据
+                    if (!data || !data.url) {
+                        throw new Error('API返回数据格式错误');
+                    }
+
+                    // 加载生成的页面
+                    resultIframe.src = data.url;
+                    
+                    // 隐藏错误信息
+                    errorMessage.style.display = 'none';
+
+                } catch (error) {
+                    console.error('请求失败:', error);
+                    showError(`生成试题失败: ${error.message}<br>请检查API Key是否正确，或稍后重试。`);
+                } finally {
+                    // 隐藏加载状态
+                    showLoading(false);
+                }
+            });
+
+            // 监听iframe加载完成事件
+            resultIframe.onload = function() {
+                if (resultIframe.src !== 'about:blank') {
+                    showLoading(false);
+                }
+            };
+
+            // 显示/隐藏加载状态
+            function showLoading(show) {
+                loading.style.display = show ? 'flex' : 'none';
+            }
+
+            // 显示错误信息
+            function showError(message) {
+                errorMessage.innerHTML = message;
+                errorMessage.style.display = 'block';
+                showLoading(false);
+            }
+
+            // 可选：添加回车键提交功能
+            apiKeyInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    submitBtn.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
