@@ -65,6 +65,7 @@
 	</dependencies>
 
 	<build>
+		<finalName>java-ai-question-generator</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

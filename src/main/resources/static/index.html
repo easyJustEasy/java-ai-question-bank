@@ -142,7 +142,15 @@
                     <option value="3">问答题</option>
                 </select>
             </div>
-
+            <!-- 在题型选择下方新增模型选择 -->
+            <div class="form-group">
+                <label for="model-type">选择模型</label>
+                <select id="model-type">
+                    <option value="qwen3-14b" selected>qwen3-14b</option>
+                    <option value="qwen3-32b">qwen3-32b</option>
+                    <option value="qwen3-235b-a22b">qwen3-235b-a22b</option>
+                </select>
+            </div>
             <div class="form-group">
                 <label for="api-key">阿里云 API Key</label>
                 <input 
@@ -154,7 +162,11 @@
             </div>
 
             <button id="submit-btn" class="submit-btn">生成试题</button>
-
+            <div class="form-group" style="margin-top:32px">
+                <p style="font-size: 0.9em; color: #b3d4fc; margin-bottom: 15px;">
+                    使用说明：请在<a href="https://bailian.console.aliyun.com/" target="_blank" style="color: #ffeb3b;">阿里云百炼平台</a>【密钥管理】中获取API Key。
+                </p>
+            </div>
             <div id="error-message" class="error-message" style="display: none;"></div>
         </div>
 
@@ -185,6 +197,8 @@
             const loading = document.getElementById('loading');
             const errorMessage = document.getElementById('error-message');
             const apiKeyData =localStorage.getItem('apiKey');
+            const modelType = document.getElementById('model-type').value; // 新增：获取所选模型类型
+
             showLoading(false);
             if(!!apiKeyData){
               apiKeyInput.value = apiKeyData;
@@ -216,7 +230,8 @@
                         },
                         body: JSON.stringify({
                             questionType: questionType,
-                            apiKey: apiKey
+                            apiKey: apiKey,
+                            modelName: modelType
                         })
                     });
                     localStorage.setItem('apiKey', apiKey);

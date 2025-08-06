@@ -7,10 +7,11 @@ import com.siyuan.siyuan.dto.QuestionGenerationRequest;
 import com.siyuan.siyuan.dto.QuestionGenerationResponse;
 import com.siyuan.siyuan.service.QuestionGenerationService;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+@Slf4j
 
 @RestController
 @CrossOrigin(origins = "*") // 生产环境应配置具体的前端域名
@@ -28,8 +29,10 @@ public class QuestionGenerationController {
     @PostMapping("/generate-java-questions")
     public ResponseEntity<QuestionGenerationResponse> generateQuestions(
             @Valid @RequestBody QuestionGenerationRequest request) throws NoApiKeyException, InputRequiredException {
+        log.info("开始生成Java试题，题型: {}", request.getQuestionType());
         String generatedUrl = questionGenerationService.generateQuestions(request);
-
+        //增加日志
+        log.info("生成Java试题成功，URL: {}", generatedUrl);
         QuestionGenerationResponse response = new QuestionGenerationResponse();
         response.setUrl(generatedUrl);
         response.setMessage("试题生成成功");

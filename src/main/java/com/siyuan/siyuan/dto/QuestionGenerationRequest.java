@@ -11,4 +11,6 @@ public class QuestionGenerationRequest {
     private Integer questionType;
     @NotBlank(message = "API密钥不能为空")
     private String apiKey;
+    @NotBlank(message = "模型名称不能为空")
+    private String modelName;
 }
