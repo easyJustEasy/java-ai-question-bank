@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
 @Slf4j
 @Service
 public class QuestionGenerationService {
@@ -51,7 +53,7 @@ private static final String KNOWLEDGE = "Java：语法、OOP、集合、异常�
         stopWatch.start("callWithMessage");
         GenerationResult result = callWithMessage(questionType, question);
         stopWatch.stop();
-        log.info("耗时统计：{}", stopWatch.prettyPrint());
+        log.info("耗时统计：{}", stopWatch.prettyPrint(TimeUnit.SECONDS));
         log.info("生成成功 {}，开始保存文件",result);
         String text = result.getOutput().getChoices().get(0).getMessage().getContent();
         String fileName = questionType.getQuestionType() + File.separator + UUID.randomUUID() + ".html";
@@ -71,6 +73,7 @@ private static final String KNOWLEDGE = "Java：语法、OOP、集合、异常�
 
 
     public GenerationResult callWithMessage(QuestionGenerationRequest request, String question) throws ApiException, NoApiKeyException, InputRequiredException {
+        log.info("开始调用百炼API:request：{}", request);
         Generation gen = new Generation();
         Message systemMsg = Message.builder()
                 .role(Role.SYSTEM.getValue())
@@ -84,7 +87,7 @@ private static final String KNOWLEDGE = "Java：语法、OOP、集合、异常�
                 // 若没有配置环境变量，请用百炼API Key将下行替换为：.apiKey("sk-xxx")
                 .apiKey(request.getApiKey())
                 // 此处以qwen-plus为例，可按需更换模型名称。模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
-                .model(appConfig.getModelName())
+                .model(request.getModelName())
                 .messages(Arrays.asList(systemMsg, userMsg))
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
                 .enableThinking(false).enableSearch(false)

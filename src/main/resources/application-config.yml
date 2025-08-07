@@ -1,0 +1,6 @@
+app:
+  # 生成的试题页面基础URL
+#  base-url: https://file.2u1.cn/java/
+  base-url: http://localhost/java/
+  file-path: /mnt/f/files/java
+  model-name: qwen3-14b

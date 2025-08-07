@@ -1,11 +1,16 @@
 spring:
   application:
     name: java
+  mvc:
+    async:
+      request-timeout: 300000  # 异步请求超时30秒(单位毫秒)
+  profiles:
+    include:
+      - config
 server:
   port: 8001
-app:
-    # 生成的试题页面基础URL
-#    base-url: https://file.2u1.cn/java/
-    base-url: http://localhost/java/
-    file-path: /mnt/f/files/java
-    model-name: qwen3-14b
+  connection-timeout: 300s  # 适用于所有Servlet容器
+  tomcat:
+    connection-timeout: 300000ms  # 连接超时5秒
+
+

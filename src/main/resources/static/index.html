@@ -146,7 +146,7 @@
             <div class="form-group">
                 <label for="model-type">选择模型</label>
                 <select id="model-type">
-                    <option value="qwen3-14b" selected>qwen3-14b</option>
+                    <option value="qwen3-14b">qwen3-14b</option>
                     <option value="qwen3-32b">qwen3-32b</option>
                     <option value="qwen3-235b-a22b">qwen3-235b-a22b</option>
                 </select>
@@ -187,7 +187,6 @@
             <p>正在生成试题，请稍候...</p>
         </div>
     </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const questionTypeSelect = document.getElementById('question-type');
@@ -197,8 +196,6 @@
             const loading = document.getElementById('loading');
             const errorMessage = document.getElementById('error-message');
             const apiKeyData =localStorage.getItem('apiKey');
-            const modelType = document.getElementById('model-type').value; // 新增：获取所选模型类型
-
             showLoading(false);
             if(!!apiKeyData){
               apiKeyInput.value = apiKeyData;
@@ -209,8 +206,9 @@
             // 提交按钮点击事件
             submitBtn.addEventListener('click', async function() {
                 // 获取用户输入
-                const questionType = questionTypeSelect.value;
+                const questionType = document.getElementById('question-type').value;
                 const apiKey = apiKeyInput.value.trim();
+                const modelType = document.getElementById('model-type').value;
 
                 // 验证输入
                 if (!apiKey) {

@@ -3,9 +3,11 @@ package com.siyuan.siyuan.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.ToString;
 
 
 @Data
+@ToString
 public class QuestionGenerationRequest {
     @NotNull(message = "题型不能为空")
     private Integer questionType;
