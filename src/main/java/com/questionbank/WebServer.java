@@ -81,10 +81,18 @@ public class WebServer {
             // 调用 DeepSeek
             String htmlContent = callDeepSeek(modelName, apiKey, questionType);
 
-            // 注入复制 + 错题本按钮 JS
+            // 注入复制按钮 + 错题本按钮 + 自动错题检测 JS
             String injectedJs = "" +
                 "<script>\n" +
                 "(function(){\n" +
+                "  var qType = '" + typeName + "';\n" +
+                "  function saveMistake(txt){\n" +
+                "    var arr=JSON.parse(localStorage.getItem('jqb_mistakes')||'[]');\n" +
+                "    if(arr.some(function(x){return x.text===txt})) return;\n" +
+                "    arr.push({id:Date.now()+'_'+Math.random().toString(36).slice(2,6),text:txt,type:qType,timestamp:Date.now()});\n" +
+                "    localStorage.setItem('jqb_mistakes',JSON.stringify(arr));\n" +
+                "    window.parent.postMessage({type:'mistake_updated'},'*');\n" +
+                "  }\n" +
                 "  function init(){\n" +
                 "    var items = document.querySelectorAll('.question, .question-item, [class*=question], li, .qa-item, .problem');\n" +
                 "    items.forEach(function(el){\n" +
@@ -95,7 +103,7 @@ public class WebServer {
                 "      var wrap=document.createElement('div');\n" +
                 "      wrap.className='q-extra-btn';\n" +
                 "      Object.assign(wrap.style,{position:'absolute',top:'6px',right:'6px',display:'flex',gap:'6px',zIndex:'99'});\n" +
-                "      // 复制按钮\n" +
+                "      // 复制\n" +
                 "      var c=document.createElement('button');\n" +
                 "      c.innerHTML='\\ud83d\\udccb';c.title='复制本题';\n" +
                 "      Object.assign(c.style,{width:'26px',height:'26px',borderRadius:'50%',border:'none',background:'rgba(102,126,234,.25)',cursor:'pointer',fontSize:'12px',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s'});\n" +
@@ -108,18 +116,28 @@ public class WebServer {
                 "      Object.assign(m.style,{width:'26px',height:'26px',borderRadius:'50%',border:'none',background:'rgba(239,68,68,.2)',cursor:'pointer',fontSize:'12px',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s'});\n" +
                 "      m.onmouseenter=function(){this.style.background='rgba(239,68,68,.4)'};\n" +
                 "      m.onmouseleave=function(){this.style.background='rgba(239,68,68,.2)'};\n" +
-                "      m.onclick=function(e){e.stopPropagation();\n" +
-                "        var arr=JSON.parse(localStorage.getItem('jqb_mistakes')||'[]');\n" +
-                "        var dup=arr.some(function(x){return x.text===txt});\n" +
-                "        if(dup){m.innerHTML='\\u2705';m.title='已在错题本';setTimeout(function(){m.innerHTML='\\ud83d\\udcdd'},1500);return;}\n" +
-                "        arr.push({id:Date.now()+'_'+Math.random().toString(36).slice(2,6),text:txt,type:'"+typeName+"',timestamp:Date.now()});\n" +
-                "        localStorage.setItem('jqb_mistakes',JSON.stringify(arr));\n" +
-                "        m.innerHTML='\\u2713';m.title='已加入';setTimeout(function(){m.innerHTML='\\ud83d\\udcdd';m.title='加入错题本'},1500);\n" +
-                "        window.parent.postMessage({type:'mistake_updated'},'*');\n" +
-                "      };\n" +
+                "      m.onclick=function(e){e.stopPropagation();saveMistake(txt);m.innerHTML='\\u2713';m.title='已加入';setTimeout(function(){m.innerHTML='\\ud83d\\udcdd';m.title='加入错题本'},1500)};\n" +
                 "      wrap.appendChild(c);wrap.appendChild(m);\n" +
                 "      el.appendChild(wrap);\n" +
                 "    });\n" +
+                "    // 自动错题检测：找提交按钮\n" +
+                "    setTimeout(function(){\n" +
+                "      var btns = document.querySelectorAll('button, input[type=submit], input[type=button]');\n" +
+                "      btns.forEach(function(btn){\n" +
+                "        var t = (btn.textContent||btn.value||'').toLowerCase();\n" +
+                "        if(t.indexOf('提交')<0&&t.indexOf('检查')<0&&t.indexOf('submit')<0&&t.indexOf('check')<0&&t.indexOf('查看')<0&&t.indexOf('交卷')<0&&t.indexOf('完成')<0) return;\n" +
+                "        btn.addEventListener('click',function(){\n" +
+                "          setTimeout(function(){\n" +
+                "            // 扫描错题：有 .wrong/.incorrect 子元素的 question\n" +
+                "            var qs = document.querySelectorAll('.question, .question-item, [class*=question]');\n" +
+                "            qs.forEach(function(q){\n" +
+                "              var wrongs = q.querySelectorAll('.wrong, .incorrect, .error');\n" +
+                "              if(wrongs.length>0) saveMistake(q.textContent.trim());\n" +
+                "            });\n" +
+                "          }, 600);\n" +
+                "        });\n" +
+                "      });\n" +
+                "    }, 1000);\n" +
                 "  }\n" +
                 "  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);\n" +
                 "  else init();\n" +
