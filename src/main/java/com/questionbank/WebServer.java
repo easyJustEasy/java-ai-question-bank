@@ -142,14 +142,14 @@ public class WebServer {
         requestBody.put("max_tokens", 8192);
 
         HttpClient client = HttpClient.newBuilder()
-            .connectTimeout(java.time.Duration.ofSeconds(30))
+            .connectTimeout(java.time.Duration.ofSeconds(60))
             .build();
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create("https://api.deepseek.com/chat/completions"))
             .header("Authorization", "Bearer " + apiKey)
             .header("Content-Type", "application/json")
-            .timeout(java.time.Duration.ofSeconds(120))
+            .timeout(java.time.Duration.ofSeconds(300))
             .POST(BodyPublishers.ofString(gson.toJson(requestBody)))
             .build();
 
