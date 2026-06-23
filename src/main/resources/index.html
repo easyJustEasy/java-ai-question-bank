@@ -245,7 +245,13 @@
                         modelName: model.value
                     })
                 })
-                .then(function(r) { return r.json(); })
+                .then(function(r) {
+                    var ct = r.headers.get('Content-Type') || '';
+                    if (!ct.includes('application/json')) {
+                        return r.text().then(function(t) { throw new Error('服务器返回非 JSON 格式: ' + t.substring(0,100)); });
+                    }
+                    return r.json();
+                })
                 .then(function(d) {
                     showLoading(false);
                     if (d.error) { showError(d.error); return; }

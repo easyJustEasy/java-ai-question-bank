@@ -163,10 +163,13 @@ public class WebServer {
             sendJson(ex, 200, Map.of("url", url, "message", "试题生成成功"));
 
         } catch (Exception e) {
-            System.err.println("生成失败: " + e.getMessage());
-            sendJson(ex, 500, Map.of("error", "生成失败: " + e.getMessage()));
+            String msg = "生成失败: " + e.getClass().getSimpleName() + ": " + e.getMessage();
+            System.err.println(msg);
+            try { sendJson(ex, 500, Map.of("error", msg)); } catch (Exception ignored) {
+                System.err.println("sendJson 也失败了，连接可能已关闭");
+            }
         }
-        ex.close();
+        try { ex.close(); } catch (Exception ignored) {}
     }
 
     /** 提供生成的 HTML 文件 */
