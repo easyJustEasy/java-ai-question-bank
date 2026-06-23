@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java 试题生成器</title>
+    <style>
+        :root{--primary:#667eea;--primary-dark:#5a6fd6;--primary-light:#818cf8;--bg:#0f0f1a;--card:#1a1a2e;--card-hover:#222244;--border:#2a2a4a;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--success:#22c55e;--accent:#a855f7;--radius:12px;--radius-sm:8px}
+        .light{--bg:#f0f4f9;--card:#ffffff;--card-hover:#f8fafc;--border:#e2e8f0;--text:#1e293b;--text2:#64748b;--text3:#94a3b8}
+        
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;transition:background .3s,color .3s}
+        .container{display:flex;height:100vh}
+        
+        /* 主内容 - 左侧 */
+        .main-content{flex:1;display:flex;flex-direction:column;position:relative}
+        .iframe-container{flex:1;margin:12px;border-radius:var(--radius);overflow:hidden;background:var(--card);border:1px solid var(--border)}
+        #result-iframe{width:100%;border:0;height:100%}
+        
+        .loading{
+            display:none;position:absolute;top:0;left:0;right:0;bottom:0;
+            background:var(--bg);opacity:.85;flex-direction:column;align-items:center;justify-content:center;z-index:10;margin:12px;border-radius:var(--radius)
+        }
+        .loading.show{display:flex}
+        .loading-spinner{
+            border:3px solid var(--border);border-top:3px solid var(--primary);
+            border-radius:50%;width:36px;height:36px;
+            animation:spin .8s linear infinite;margin-bottom:16px
+        }
+        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        .loading p{color:var(--text2);font-size:14px}
+        
+        .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);gap:8px}
+        .empty-state .icon{font-size:48px;opacity:.4}
+        .empty-state p{font-size:14px}
+
+        /* 侧栏 - 右侧 */
+        .sidebar{
+            width:320px;min-width:320px;background:var(--card);
+            border-left:1px solid var(--border);padding:20px;
+            overflow-y:auto;display:flex;flex-direction:column;gap:4px;
+            transition:background .3s,border .3s
+        }
+        .sidebar::-webkit-scrollbar{width:4px}
+        .sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+        
+        .logo{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:2px}
+        .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0}
+        .logo h1{font-size:17px;font-weight:700;color:var(--text)}
+        .logo p{font-size:11px;color:var(--text2);margin-top:1px}
+        
+        .theme-toggle{display:flex;align-items:center;gap:6px;margin-left:auto;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:var(--radius-sm);background:var(--bg);border:1px solid var(--border);color:var(--text2);transition:all .2s}
+        .theme-toggle:hover{border-color:var(--primary)}
+        
+        .form-group{margin-bottom:12px}
+        .form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;letter-spacing:.3px}
+        .form-group select,.form-group input{
+            width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);
+            font-size:14px;background:var(--bg);color:var(--text);outline:none;transition:border .2s,background .3s;font-family:inherit
+        }
+        .form-group select:focus,.form-group input:focus{border-color:var(--primary)}
+        .form-group select option{background:var(--card);color:var(--text)}
+        .form-group input::placeholder{color:var(--text3)}
+        
+        .submit-btn{
+            background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;
+            padding:11px;border:none;border-radius:var(--radius-sm);cursor:pointer;
+            font-size:14px;font-weight:600;width:100%;transition:all .3s;margin-top:2px
+        }
+        .submit-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(102,126,234,.3)}
+        .submit-btn:active{transform:translateY(0)}
+        .submit-btn:disabled{background:var(--text3);cursor:not-allowed;transform:none;box-shadow:none}
+        
+        .error-message{display:none;background:#dc2626;color:#fff;padding:9px 12px;border-radius:var(--radius-sm);font-size:13px;margin-top:2px}
+        .error-message.show{display:block}
+        
+        .usage-link{font-size:11px;color:var(--text3);margin-top:auto;padding-top:10px;text-align:center;border-top:1px solid var(--border)}
+        .usage-link a{color:var(--primary-light);text-decoration:none}
+        .usage-link a:hover{text-decoration:underline}
+
+        @media(max-width:768px){
+            .container{flex-direction:column}
+            .sidebar{width:100%;min-width:auto;max-height:45vh;border-left:none;border-bottom:1px solid var(--border)}
+            .main-content{height:55vh}
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧：主内容 -->
+        <div class="main-content">
+            <div class="iframe-container">
+                <div class="empty-state" id="emptyState">
+                    <div class="icon">📝</div>
+                    <p>选择题型和模型，点击生成</p>
+                    <p style="font-size:12px">生成的试题将显示在这里</p>
+                </div>
+                <iframe id="result-iframe" src="about:blank" style="display:none" allowfullscreen></iframe>
+            </div>
+            <div id="loading" class="loading">
+                <div class="loading-spinner"></div>
+                <p>⏳ 正在生成试题，请稍候...</p>
+            </div>
+        </div>
+        
+        <!-- 右侧：控制栏 -->
+        <div class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">📝</div>
+                <div>
+                    <h1>Java 试题</h1>
+                    <p>基于 DeepSeek AI 生成</p>
+                </div>
+                <div class="theme-toggle" id="themeToggle" title="切换亮色/暗色">🌙</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="question-type">题型</label>
+                <select id="question-type">
+                    <option value="1">选择题</option>
+                    <option value="2">判断题</option>
+                    <option value="3">问答题</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="model-type">模型</label>
+                <select id="model-type">
+                    <option value="deepseek-v4-flash" selected>DeepSeek V4 Flash</option>
+                    <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="api-key">API Key</label>
+                <div style="position:relative">
+                    <input type="password" id="api-key" placeholder="sk-..." autocomplete="off" style="padding-right:40px">
+                    <span id="keyEye" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:var(--text3);user-select:none">👁️</span>
+                </div>
+            </div>
+            
+            <button id="submit-btn" class="submit-btn">🚀 生成试题</button>
+            <div id="error-message" class="error-message"></div>
+            
+            <div class="usage-link">
+                <a href="https://platform.deepseek.com/" target="_blank">🔑 DeepSeek 开放平台</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const qtype = document.getElementById('question-type');
+            const apiKey = document.getElementById('api-key');
+            const model = document.getElementById('model-type');
+            const btn = document.getElementById('submit-btn');
+            const iframe = document.getElementById('result-iframe');
+            const emptyState = document.getElementById('emptyState');
+            const loading = document.getElementById('loading');
+            const errorMsg = document.getElementById('error-message');
+            const themeToggle = document.getElementById('themeToggle');
+            const keyEye = document.getElementById('keyEye');
+
+            // === API Key 显隐 ===
+            keyEye.addEventListener('click', function() {
+                var isPass = apiKey.type === 'password';
+                apiKey.type = isPass ? 'text' : 'password';
+                keyEye.textContent = isPass ? '👁️‍🗨️' : '👁️';
+            });
+
+            // === 主题切换 ===
+            function setTheme(dark) {
+                document.body.classList.toggle('light', !dark);
+                themeToggle.textContent = dark ? '🌙' : '☀️';
+                localStorage.setItem('jqb_dark', dark ? '1' : '0');
+            }
+            const isDark = localStorage.getItem('jqb_dark') !== '0'; // 默认暗色
+            setTheme(isDark);
+            themeToggle.addEventListener('click', function() {
+                setTheme(!document.body.classList.contains('light'));
+            });
+
+            // === 恢复上次保存 ===
+            const savedKey = localStorage.getItem('jqb_api_key') || localStorage.getItem('ds_api_key');
+            if (savedKey) { apiKey.value = savedKey; localStorage.setItem('jqb_api_key', savedKey); localStorage.removeItem('ds_api_key'); }
+            const savedModel = localStorage.getItem('jqb_model');
+            if (savedModel) model.value = savedModel;
+            const savedType = localStorage.getItem('jqb_type');
+            if (savedType) qtype.value = savedType;
+
+            model.addEventListener('change', function() {
+                localStorage.setItem('jqb_model', model.value);
+            });
+            qtype.addEventListener('change', function() {
+                localStorage.setItem('jqb_type', qtype.value);
+            });
+
+            function showLoading(show) {
+                loading.classList.toggle('show', show);
+                btn.disabled = show;
+                btn.textContent = show ? '⏳ 生成中...' : '🚀 生成试题';
+            }
+
+            function showError(msg) {
+                errorMsg.textContent = msg;
+                errorMsg.classList.add('show');
+                setTimeout(function(){ errorMsg.classList.remove('show'); }, 5000);
+            }
+
+            function showResult(url) {
+                emptyState.style.display = 'none';
+                iframe.style.display = '';
+                iframe.src = url;
+            }
+
+            btn.addEventListener('click', function() {
+                const key = apiKey.value.trim();
+                if (!key) { showError('请输入 DeepSeek API Key'); return; }
+                localStorage.setItem('jqb_api_key', key);
+
+                showLoading(true);
+                errorMsg.classList.remove('show');
+
+                fetch('/api/generate-java-questions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        questionType: parseInt(qtype.value),
+                        apiKey: key,
+                        modelName: model.value
+                    })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    showLoading(false);
+                    if (d.error) { showError(d.error); return; }
+                    if (d.url) {
+                        var localUrl = d.url.replace(/^https?:\/\/[^\/]+\/java\//, '/files/');
+                        showResult(localUrl);
+                    }
+                })
+                .catch(function(e) {
+                    showLoading(false);
+                    showError('请求失败: ' + e.message);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
