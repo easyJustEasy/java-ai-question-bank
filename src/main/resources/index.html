@@ -174,12 +174,14 @@
             const themeToggle = document.getElementById('themeToggle');
             const keyEye = document.getElementById('keyEye');
 
-            // === API Key 显隐 ===
-            keyEye.addEventListener('click', function() {
-                var isPass = apiKey.type === 'password';
-                apiKey.type = isPass ? 'text' : 'password';
-                keyEye.textContent = isPass ? '👁️‍🗨️' : '👁️';
-            });
+            // === API Key 显隐（安全兜底）===
+            if (keyEye) {
+                keyEye.addEventListener('click', function() {
+                    var isPass = apiKey.type === 'password';
+                    apiKey.type = isPass ? 'text' : 'password';
+                    keyEye.textContent = isPass ? '👁️‍🗨️' : '👁️';
+                });
+            }
 
             // === 主题切换 ===
             function setTheme(dark) {
@@ -190,7 +192,7 @@
             const isDark = localStorage.getItem('jqb_dark') !== '0'; // 默认暗色
             setTheme(isDark);
             themeToggle.addEventListener('click', function() {
-                setTheme(!document.body.classList.contains('light'));
+                setTheme(document.body.classList.contains('light'));
             });
 
             // === 恢复上次保存 ===
