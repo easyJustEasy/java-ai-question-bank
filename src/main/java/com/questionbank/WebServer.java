@@ -81,30 +81,48 @@ public class WebServer {
             // 调用 DeepSeek
             String htmlContent = callDeepSeek(modelName, apiKey, questionType);
 
-            // 注入复制按钮 JS（自动识别题目并加按钮）
+            // 注入复制 + 错题本按钮 JS
             String injectedJs = "" +
                 "<script>\n" +
                 "(function(){\n" +
-                "  function addCopyButtons(){\n" +
+                "  function init(){\n" +
                 "    var items = document.querySelectorAll('.question, .question-item, [class*=question], li, .qa-item, .problem');\n" +
                 "    items.forEach(function(el){\n" +
-                "      if(el.querySelector('.q-copy-btn') || el.querySelector('button')) return;\n" +
+                "      if(!el.textContent.trim()||el.querySelector('.q-extra-btn')) return;\n" +
                 "      var txt = el.textContent.trim();\n" +
-                "      if(txt.length < 10 || !/\\d/.test(txt.substr(0,10))) return;\n" +
-                "      var btn = document.createElement('button');\n" +
-                "      btn.className = 'q-copy-btn';\n" +
-                "      btn.innerHTML = '\\ud83d\\udccb';\n" +
-                "      btn.title = '复制本题';\n" +
-                "      Object.assign(btn.style, {position:'absolute',right:'8px',top:'8px',width:'28px',height:'28px',borderRadius:'50%',border:'none',background:'rgba(102,126,234,.25)',cursor:'pointer',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',transition:'background .2s',zIndex:'99'});\n" +
-                "      btn.onmouseenter=function(){this.style.background='rgba(102,126,234,.5)'};\n" +
-                "      btn.onmouseleave=function(){this.style.background='rgba(102,126,234,.25)'};\n" +
-                "      btn.onclick=function(e){e.stopPropagation();navigator.clipboard.writeText(txt).then(function(){btn.innerHTML='\\u2713';setTimeout(function(){btn.innerHTML='\\ud83d\\udccb'},1500)}).catch(function(){prompt('复制失败，请手动复制:',txt)})};\n" +
+                "      if(txt.length<10||!/\\d/.test(txt.substr(0,10))) return;\n" +
                 "      if(getComputedStyle(el).position==='static') el.style.position='relative';\n" +
-                "      el.appendChild(btn);\n" +
+                "      var wrap=document.createElement('div');\n" +
+                "      wrap.className='q-extra-btn';\n" +
+                "      Object.assign(wrap.style,{position:'absolute',top:'6px',right:'6px',display:'flex',gap:'6px',zIndex:'99'});\n" +
+                "      // 复制按钮\n" +
+                "      var c=document.createElement('button');\n" +
+                "      c.innerHTML='\\ud83d\\udccb';c.title='复制本题';\n" +
+                "      Object.assign(c.style,{width:'26px',height:'26px',borderRadius:'50%',border:'none',background:'rgba(102,126,234,.25)',cursor:'pointer',fontSize:'12px',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s'});\n" +
+                "      c.onmouseenter=function(){this.style.background='rgba(102,126,234,.5)'};\n" +
+                "      c.onmouseleave=function(){this.style.background='rgba(102,126,234,.25)'};\n" +
+                "      c.onclick=function(e){e.stopPropagation();navigator.clipboard.writeText(txt).then(function(){c.innerHTML='\\u2713';setTimeout(function(){c.innerHTML='\\ud83d\\udccb'},1500)}).catch(function(){prompt('复制失败',txt)})};\n" +
+                "      // 错题本按钮\n" +
+                "      var m=document.createElement('button');\n" +
+                "      m.innerHTML='\\ud83d\\udcdd';m.title='加入错题本';\n" +
+                "      Object.assign(m.style,{width:'26px',height:'26px',borderRadius:'50%',border:'none',background:'rgba(239,68,68,.2)',cursor:'pointer',fontSize:'12px',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s'});\n" +
+                "      m.onmouseenter=function(){this.style.background='rgba(239,68,68,.4)'};\n" +
+                "      m.onmouseleave=function(){this.style.background='rgba(239,68,68,.2)'};\n" +
+                "      m.onclick=function(e){e.stopPropagation();\n" +
+                "        var arr=JSON.parse(localStorage.getItem('jqb_mistakes')||'[]');\n" +
+                "        var dup=arr.some(function(x){return x.text===txt});\n" +
+                "        if(dup){m.innerHTML='\\u2705';m.title='已在错题本';setTimeout(function(){m.innerHTML='\\ud83d\\udcdd'},1500);return;}\n" +
+                "        arr.push({id:Date.now()+'_'+Math.random().toString(36).slice(2,6),text:txt,type:'"+typeName+"',timestamp:Date.now()});\n" +
+                "        localStorage.setItem('jqb_mistakes',JSON.stringify(arr));\n" +
+                "        m.innerHTML='\\u2713';m.title='已加入';setTimeout(function(){m.innerHTML='\\ud83d\\udcdd';m.title='加入错题本'},1500);\n" +
+                "        window.parent.postMessage({type:'mistake_updated'},'*');\n" +
+                "      };\n" +
+                "      wrap.appendChild(c);wrap.appendChild(m);\n" +
+                "      el.appendChild(wrap);\n" +
                 "    });\n" +
                 "  }\n" +
-                "  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',addCopyButtons);\n" +
-                "  else addCopyButtons();\n" +
+                "  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);\n" +
+                "  else init();\n" +
                 "})();\n" +
                 "</script>";
 

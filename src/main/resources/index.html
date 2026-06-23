@@ -141,6 +141,19 @@
             
             <button id="submit-btn" class="submit-btn">🚀 生成试题</button>
             <div id="error-message" class="error-message"></div>
+
+            <!-- 错题本 -->
+            <div style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px">
+                <div id="mistakeHeader" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 0;border-radius:var(--radius-sm);transition:background .2s" onmouseenter="this.style.background='var(--card-hover)'" onmouseleave="this.style.background='transparent'">
+                    <span style="font-size:14px">📝</span>
+                    <span style="font-size:13px;font-weight:600;color:var(--text2);flex:1">错题本</span>
+                    <span id="mistakeCount" style="font-size:11px;background:var(--primary);color:#fff;border-radius:10px;padding:1px 7px">0</span>
+                    <span id="mistakeArrow" style="font-size:12px;color:var(--text3)">▶</span>
+                </div>
+                <div id="mistakeList" style="display:none;max-height:300px;overflow-y:auto;padding:4px 0">
+                    <div id="mistakeEmpty" style="text-align:center;padding:12px 0;font-size:12px;color:var(--text3)">错题本还是空的 📭</div>
+                </div>
+            </div>
             
             <div class="usage-link">
                 <a href="https://platform.deepseek.com/" target="_blank">🔑 DeepSeek 开放平台</a>
@@ -243,6 +256,98 @@
                     showLoading(false);
                     showError('请求失败: ' + e.message);
                 });
+            });
+
+            // === 错题本 ===
+            const mistakeHeader = document.getElementById('mistakeHeader');
+            const mistakeList = document.getElementById('mistakeList');
+            const mistakeCount = document.getElementById('mistakeCount');
+            const mistakeEmpty = document.getElementById('mistakeEmpty');
+            const mistakeArrow = document.getElementById('mistakeArrow');
+            
+            function loadMistakes() {
+                var arr = JSON.parse(localStorage.getItem('jqb_mistakes') || '[]');
+                mistakeCount.textContent = arr.length;
+                mistakeEmpty.style.display = arr.length ? 'none' : 'block';
+                // 删除所有已有条目（保留 empty）
+                var items = mistakeList.querySelectorAll('.mistake-item');
+                items.forEach(function(el){ el.remove(); });
+                arr.forEach(function(q, i) {
+                    var div = document.createElement('div');
+                    div.className = 'mistake-item';
+                    div.style.cssText = 'padding:8px;margin-bottom:6px;border-radius:var(--radius-sm);background:var(--bg);font-size:12px;line-height:1.6;position:relative;cursor:pointer;border:1px solid var(--border);transition:border .2s';
+                    div.onmouseenter = function(){ this.style.borderColor = 'var(--primary)' };
+                    div.onmouseleave = function(){ this.style.borderColor = 'var(--border)' };
+                    
+                    // 题号 + 类型
+                    var header = document.createElement('div');
+                    header.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+                    var badge = document.createElement('span');
+                    badge.textContent = '#' + (i+1);
+                    badge.style.cssText = 'font-size:11px;font-weight:600;color:var(--primary)';
+                    var typeTag = document.createElement('span');
+                    typeTag.textContent = q.type || '试题';
+                    typeTag.style.cssText = 'font-size:10px;background:rgba(102,126,234,.15);color:var(--primary);padding:1px 6px;border-radius:4px';
+                    header.appendChild(badge);
+                    header.appendChild(typeTag);
+                    
+                    // 文本（截断）
+                    var text = document.createElement('div');
+                    text.textContent = q.text.length > 120 ? q.text.substring(0, 120) + '...' : q.text;
+                    text.style.cssText = 'color:var(--text2);font-size:12px;line-height:1.5';
+                    
+                    // 操作按钮
+                    var actions = document.createElement('div');
+                    actions.style.cssText = 'display:flex;gap:4px;margin-top:4px';
+                    
+                    var showBtn = document.createElement('span');
+                    showBtn.textContent = '👁️';
+                    showBtn.title = '查看完整';
+                    showBtn.style.cssText = 'cursor:pointer;font-size:13px;opacity:.6';
+                    showBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        alert(q.text);
+                    };
+                    
+                    var delBtn = document.createElement('span');
+                    delBtn.textContent = '🗑️';
+                    delBtn.title = '删除';
+                    delBtn.style.cssText = 'cursor:pointer;font-size:13px;opacity:.6';
+                    delBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        arr.splice(i, 1);
+                        localStorage.setItem('jqb_mistakes', JSON.stringify(arr));
+                        loadMistakes();
+                    };
+                    
+                    actions.appendChild(showBtn);
+                    actions.appendChild(delBtn);
+                    
+                    div.appendChild(header);
+                    div.appendChild(text);
+                    div.appendChild(actions);
+                    mistakeList.insertBefore(div, mistakeEmpty);
+                });
+            }
+            
+            var mistakeOpen = false;
+            mistakeHeader.addEventListener('click', function() {
+                mistakeOpen = !mistakeOpen;
+                mistakeList.style.display = mistakeOpen ? 'block' : 'none';
+                mistakeArrow.textContent = mistakeOpen ? '▼' : '▶';
+                if (mistakeOpen) loadMistakes();
+            });
+            
+            // 接收 iframe 发来的错题更新消息
+            window.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'mistake_updated') {
+                    if (mistakeOpen) loadMistakes();
+                    else {
+                        // 更新计数
+                        var arr = JSON.parse(localStorage.getItem('jqb_mistakes') || '[]');
+                        mistakeCount.textContent = arr.length;
+                    }
+                }
             });
         });
     </script>
